@@ -5,11 +5,11 @@ import logging
 
 
 from typing import List
-from user import User
-from ride import Ride
-from rating import Rating
-from custom_enums.ride_status import RideStatus
-from custom_enums.user_roles import UserRole
+from custom.types.user import User
+from custom.types.ride import Ride
+from custom.types.rating import Rating
+from custom.enums.ride_status import RideStatus
+from custom.enums.user_roles import UserRole
 
 
 class DB_Handler:

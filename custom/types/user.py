@@ -1,4 +1,4 @@
-from custom_enums.user_roles import UserRole
+from custom.enums.user_roles import UserRole
 from typing import Tuple
 
 

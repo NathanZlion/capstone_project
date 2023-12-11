@@ -1,5 +1,5 @@
 from typing import Tuple
-from custom_enums.ride_status import RideStatus
+from custom.enums.ride_status import RideStatus
 
 
 class Ride:
