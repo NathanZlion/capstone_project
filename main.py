@@ -9,24 +9,25 @@ from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import (
-    InlineKeyboardButton,
     KeyboardButton,
     Message,
     ReplyKeyboardMarkup,
     ReplyKeyboardRemove,
 )
 
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from dotenv import load_dotenv
-from database_handler import DB_Handler
+from utils.database_handler import DB_Handler
 
 
 load_dotenv(".env")
-BOT_TOKEN = getenv("BOT_TOKEN")
+BOT_TOKEN : str = getenv("BOT_TOKEN") # type: ignore
 
 form_router = Router()
-db_handler = None
 
+try:
+    db_handler = DB_Handler()
+except Exception:
+    exit()
 
 class Form(StatesGroup):
     name = State()
@@ -37,19 +38,23 @@ class Form(StatesGroup):
 @form_router.message(CommandStart())
 async def command_start(message: Message, state: FSMContext) -> None:
     """checks if the user has already been registered in the database"""
-    user_id = message.from_user.id
+    user = message.from_user
 
-    # check user in database
-    user_in_database = True
+    if not user:
+        await message.answer("Something went wrong!")
+        return
 
-    if user_in_database:
-        await state.set_state(Form.name)
+    # get user from database
+    user = db_handler.get_user_by_user_id(user.id)
+
+    if user:
+        # updating the state of the user
+        await state.set_state(Form.role)
         await message.answer(
-            "Hi there, Welcome to Ride Hailing Bot. What's your name?",
+            f"Hi {user.full_name}, Welcome back to Ride Hailing Bot.",
             reply_markup=ReplyKeyboardRemove(),
         )
-
-    else:
+    else: 
         await state.set_state(Form.name)
         await message.answer(
             "Hi there, Welcome to Ride Hailing Bot. What's your name?",
@@ -59,8 +64,13 @@ async def command_start(message: Message, state: FSMContext) -> None:
 
 @form_router.message(Form.name)
 async def process_name(message: Message, state: FSMContext) -> None:
-    user_input: str = message.text
-    if len(user_input.split()) != 2:
+    user_input: str | None = message.text
+    if not user_input:
+        await message.answer(
+            f"Please Enter your full name: eg: {html.italic('Abebe Kebede')}"
+        )
+
+    elif len(user_input.split()) != 2:
         await message.answer(
             f'Please Enter your full name: eg: {html.italic("Abebe Kebede")}'
         )
@@ -76,14 +86,27 @@ async def process_name(message: Message, state: FSMContext) -> None:
                     ]
                 ],
                 resize_keyboard=True,
-            ),
+            )
         )
 
 
 @form_router.message(Form.phone_number)
 async def process_phone_number(message: Message, state: FSMContext) -> None:
-    print(message.contact)
-    await state.update_data(phone_number=message.contact.phone_number)
+    if not message.contact:
+        await message.answer(
+            f"Please share your phone number with us.",
+            reply_markup=ReplyKeyboardMarkup(
+                keyboard=[
+                    [
+                        KeyboardButton(text="Share your Phone", request_contact=True),
+                    ]
+                ],
+                resize_keyboard=True
+            )
+        )
+        return
+
+    await state.update_data(phone_number=message.contact.phone_number) 
     await state.set_state(Form.role)
 
     await message.answer(
@@ -95,33 +118,37 @@ async def process_phone_number(message: Message, state: FSMContext) -> None:
                     KeyboardButton(text="Passenger"),
                 ]
             ]
-        ),
+        )
     )
 
 
 @form_router.message(Form.role)
 async def process_role(message: Message, state: FSMContext) -> None:
     """The registration process is completed here. So this method saves the user into the database"""
+    if not message.from_user:
+        await message.answer("Something went wrong!")
+        return
 
     await state.update_data(role=message.text)
     data = await state.get_data()
+    print(f'New User registered: {data.__str__()} ')
+
+    db_handler.create_user(
+        user_id = message.from_user.id,
+        full_name=data['name'],
+        phone_number=data['phone_number'],
+        role=data['role']
+    )
     await message.answer(
         f"Registration Completed! {data}",
-        reply_markup=ReplyKeyboardRemove(),
+        reply_markup=ReplyKeyboardRemove()
     )
 
 
 async def main():
-    global db_handler
     bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.HTML)
     dp = Dispatcher()
     dp.include_router(form_router)
-
-    # try connecting to the database
-    try:
-        db_handler = DB_Handler()
-    except Exception:
-        return
 
     await dp.start_polling(bot)
 
