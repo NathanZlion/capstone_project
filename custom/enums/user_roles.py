@@ -1,7 +1,7 @@
-from dataclasses import dataclass
+
+from enum import Enum
 
 
-@dataclass
-class UserRole:
-    Driver: str = "driver"
-    Passenger: str = "passenger"
+class UserRole(Enum):
+    Driver = "Driver"
+    Passenger = "Passenger"

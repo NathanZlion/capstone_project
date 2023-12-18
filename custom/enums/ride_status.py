@@ -1,9 +1,8 @@
-from dataclasses import dataclass
+from enum import Enum
 
 
-@dataclass
-class RideStatus:
-    created: str = "created"
-    ongoing: str = "ongoing"
-    completed: str = "completed"
-    calcelled: str = "cancelled"
+class RideStatus(Enum):
+    created = "created"
+    ongoing = "ongoing"
+    completed = "completed"
+    cancelled = "cancelled"
