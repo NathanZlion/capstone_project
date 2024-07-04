@@ -1,5 +1,8 @@
 # Ride Hailing Bot 
 
+Welcome, This is a telegram bot that let's users contact drives around them and can order a ride, get driver's contact.
+
+
 ## Database Schema
 
 1. **Users Table:**
